@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard IVA — Junio 2026 | Deviart SA de CV</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a2332; }
+
+  .header {
+    background: linear-gradient(135deg, #1a3a5c 0%, #2563a8 100%);
+    color: white; padding: 28px 40px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .header-title { font-size: 1.6rem; font-weight: 700; letter-spacing: .5px; }
+  .header .subtitle { font-size: 0.85rem; opacity: .8; margin-top: 4px; }
+  .badge {
+    background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3);
+    border-radius: 20px; padding: 6px 16px; font-size: .82rem; font-weight: 600;
+  }
+
+  .container { max-width: 1300px; margin: 0 auto; padding: 30px 24px; }
+
+  .bank-tabs { display: flex; gap: 0; margin-bottom: 24px; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+  .bank-tab {
+    flex: 1; padding: 14px 20px; text-align: center; cursor: pointer;
+    font-weight: 700; font-size: .88rem; transition: all .2s; border: none;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .bank-tab.bbva { background: #004481; color: white; }
+  .bank-tab.santander { background: #EC0000; color: white; }
+  .bank-tab.consolidado { background: #1e3a5f; color: white; }
+  .bank-tab.inactive { opacity: .45; filter: grayscale(.4); }
+  .bank-tab:hover { opacity: 1 !important; filter: none !important; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .kpi-card {
+    background: white; border-radius: 12px; padding: 22px 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.07); border-left: 5px solid #ddd;
+  }
+  .kpi-card.ingresos { border-left-color: #22c55e; }
+  .kpi-card.egresos  { border-left-color: #3b82f6; }
+  .kpi-card.diferencia { border-left-color: #f59e0b; }
+  .kpi-card.iva  { border-left-color: #ef4444; }
+  .kpi-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: #64748b; margin-bottom: 8px; }
+  .kpi-value { font-size: 1.65rem; font-weight: 800; line-height: 1; }
+  .kpi-card.ingresos .kpi-value { color: #16a34a; }
+  .kpi-card.egresos  .kpi-value { color: #2563eb; }
+  .kpi-card.diferencia .kpi-value { color: #d97706; }
+  .kpi-card.iva  .kpi-value { color: #dc2626; }
+  .kpi-note { font-size: .7rem; color: #94a3b8; margin-top: 6px; }
+  .kpi-movs { font-size: .75rem; font-weight: 600; color: #64748b; margin-top: 4px; }
+
+  .bank-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+  .bank-card {
+    background: white; border-radius: 12px; padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.07);
+  }
+  .bank-card-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    padding-bottom: 12px; border-bottom: 2px solid #f1f5f9;
+  }
+  .bank-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+  .bank-card-title { font-size: 1rem; font-weight: 700; color: #1e3a5f; }
+  .bank-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f8fafc; }
+  .bank-row:last-child { border-bottom: none; }
+  .bank-row-label { font-size: .8rem; color: #64748b; }
+  .bank-row-val { font-size: .88rem; font-weight: 700; font-family: monospace; }
+  .green { color: #16a34a; }
+  .blue  { color: #2563eb; }
+  .amber { color: #d97706; }
+  .red   { color: #dc2626; }
+
+  .section-title {
+    font-size: 1rem; font-weight: 700; color: #1e3a5f;
+    margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+  .chart-card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+  .chart-container { position: relative; height: 280px; }
+
+  .iva-section { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.07); margin-bottom: 24px; }
+  .iva-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px; }
+  .iva-box { border-radius: 10px; padding: 18px 20px; text-align: center; }
+  .iva-box.trasladado { background: #fef9ee; border: 1px solid #fcd34d; }
+  .iva-box.acreditable { background: #f0fdf4; border: 1px solid #86efac; }
+  .iva-box.neto { background: #fef2f2; border: 1px solid #fca5a5; }
+  .iva-box .label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: #64748b; margin-bottom: 8px; }
+  .iva-box .value { font-size: 1.45rem; font-weight: 800; }
+  .iva-box.trasladado .value { color: #b45309; }
+  .iva-box.acreditable .value { color: #15803d; }
+  .iva-box.neto .value { color: #dc2626; }
+  .iva-box .sub { font-size: .68rem; color: #94a3b8; margin-top: 4px; }
+
+  .iva-banks { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .iva-bank-card { border-radius: 10px; padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; }
+  .iva-bank-title { font-size: .8rem; font-weight: 700; margin-bottom: 10px; }
+  .iva-bank-row { display: flex; justify-content: space-between; font-size: .75rem; padding: 4px 0; }
+
+  .alert-box { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; padding: 14px 18px; margin-top: 16px; display: flex; align-items: flex-start; gap: 12px; }
+  .alert-text { font-size: .78rem; color: #92400e; line-height: 1.65; }
+  .alert-text strong { display: block; margin-bottom: 3px; font-size: .8rem; color: #78350f; }
+
+  .tables-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+  .table-card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+  table { width: 100%; border-collapse: collapse; font-size: .79rem; }
+  th { background: #f8fafc; color: #475569; font-weight: 700; text-transform: uppercase; font-size: .67rem; letter-spacing: .6px; padding: 9px 10px; text-align: left; border-bottom: 2px solid #e2e8f0; }
+  td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fafc; }
+  .amount { text-align: right; font-weight: 600; font-family: monospace; font-size: .8rem; }
+  .tag { display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: .63rem; font-weight: 700; text-transform: uppercase; }
+  .tag.iva-si { background: #dcfce7; color: #166534; }
+  .tag.iva-no { background: #fee2e2; color: #991b1b; }
+  .tag.bbva-tag { background: #dbeafe; color: #1e40af; }
+  .tag.sant-tag { background: #fee2e2; color: #9f1239; }
+
+  .detail-section { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.07); margin-bottom: 24px; }
+  .tab-buttons { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tab-btn { padding: 7px 16px; border-radius: 20px; border: 1.5px solid #cbd5e1; background: white; color: #64748b; font-size: .77rem; font-weight: 600; cursor: pointer; transition: all .2s; }
+  .tab-btn.active { background: #1e3a5f; color: white; border-color: #1e3a5f; }
+  .tab-btn:hover:not(.active) { background: #f1f5f9; }
+  .detail-table-wrap { max-height: 360px; overflow-y: auto; border-radius: 8px; border: 1px solid #e2e8f0; }
+  .detail-table-wrap th { position: sticky; top: 0; z-index: 1; }
+
+  .disclaimer { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 14px 18px; margin-bottom: 24px; font-size: .73rem; color: #475569; line-height: 1.6; }
+  .disclaimer strong { color: #1e3a5f; }
+
+  .footer { text-align: center; font-size: .72rem; color: #94a3b8; padding: 20px; background: white; border-top: 1px solid #e2e8f0; border-radius: 0 0 12px 12px; }
+
+  .total-row td { font-weight: 700; background: #f8fafc !important; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">📊 Dashboard IVA — Junio 2026</div>
+    <div class="subtitle">Deviart SA de CV &nbsp;·&nbsp; BBVA + Santander &nbsp;·&nbsp; Diferencia Ingresos vs Egresos para optimización de IVA</div>
+  </div>
+  <div class="badge">Generado: 23 junio 2026</div>
+</div>
+
+<div class="container">
+
+  <div class="disclaimer">
+    <strong>⚠️ Nota metodológica:</strong> Los montos corresponden a movimientos bancarios de junio 2026 extraídos de las hojas <em>JUNIO 2026</em> (ingresos) y <em>PROVEEDORES</em> (egresos) de cada banco. El IVA estimado asume montos con IVA incluido al 16%. Dividendos, inversiones y nómina se clasifican <strong>sin IVA</strong>. Esta estimación no sustituye el cálculo fiscal oficial del contador.
+  </div>
+
+  <div class="section-title" style="margin-bottom:16px;">
+    <div class="dot" style="background:#1e3a5f;"></div>
+    Consolidado BBVA + Santander — Junio 2026
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi-card ingresos">
+      <div class="kpi-label">💰 Total Ingresos</div>
+      <div class="kpi-value">$6,297,379</div>
+      <div class="kpi-movs">174 movimientos (72 BBVA + 102 SAN)</div>
+      <div class="kpi-note">BBVA $3,703,744 · Santander $2,593,635</div>
+    </div>
+    <div class="kpi-card egresos">
+      <div class="kpi-label">💸 Total Egresos</div>
+      <div class="kpi-value">$5,674,160</div>
+      <div class="kpi-movs">120 movimientos (41 BBVA + 79 SAN)</div>
+      <div class="kpi-note">BBVA $3,367,907 · Santander $2,306,253</div>
+    </div>
+    <div class="kpi-card diferencia">
+      <div class="kpi-label">⚖️ Diferencia Neta</div>
+      <div class="kpi-value">$623,219</div>
+      <div class="kpi-movs">Ingresos − Egresos</div>
+      <div class="kpi-note">Remanente bruto del mes</div>
+    </div>
+    <div class="kpi-card iva">
+      <div class="kpi-label">🧾 IVA a Pagar Est.</div>
+      <div class="kpi-value">$268,264</div>
+      <div class="kpi-movs">Trasladado − Acreditable</div>
+      <div class="kpi-note">Estimado sobre base operativa</div>
+    </div>
+  </div>
+
+  <div class="bank-compare">
+    <div class="bank-card">
+      <div class="bank-card-header">
+        <div class="bank-dot" style="background:#004481;"></div>
+        <div class="bank-card-title">🏦 BBVA — Junio 2026</div>
+      </div>
+      <div class="bank-row"><span class="bank-row-label">Total Ingresos</span><span class="bank-row-val green">$3,703,743.81</span></div>
+      <div class="bank-row"><span class="bank-row-label">↳ Operativos (con IVA)</span><span class="bank-row-val" style="color:#64748b;">$965,144.64</span></div>
+      <div class="bank-row"><span class="bank-row-label">↳ No operativos (fondos/devol.)</span><span class="bank-row-val" style="color:#94a3b8;">$2,738,599.17</span></div>
+      <div class="bank-row" style="margin-top:6px;"><span class="bank-row-label">Total Egresos</span><span class="bank-row-val blue">$3,367,907.33</span></div>
+      <div class="bank-row"><span class="bank-row-label">↳ Con IVA acreditable</span><span class="bank-row-val" style="color:#64748b;">$601,818.49</span></div>
+      <div class="bank-row"><span class="bank-row-label">↳ Sin IVA (dividendos/efec.)</span><span class="bank-row-val" style="color:#94a3b8;">$2,766,088.84</span></div>
+      <div class="bank-row" style="margin-top:6px; border-top: 2px solid #e2e8f0; padding-top:10px;"><span class="bank-row-label">Diferencia</span><span class="bank-row-val amber">$335,836.48</span></div>
+      <div class="bank-row"><span class="bank-row-label">IVA neto estimado</span><span class="bank-row-val red">$50,113.95</span></div>
+    </div>
+
+    <div class="bank-card">
+      <div class="bank-card-header">
+        <div class="bank-dot" style="background:#EC0000;"></div>
+        <div class="bank-card-title">🏦 Santander — Junio 2026</div>
+      </div>
+      <div class="bank-row"><span class="bank-row-label">Total Ingresos</span><span class="bank-row-val green">$2,593,635.35</span></div>
+      <div class="bank-row"><span class="bank-row-label">↳ ML + Shein + FDIS + Otros</span><span class="bank-row-val" style="color:#64748b;">$2,593,635.34</span></div>
+      <div class="bank-row"><span class="bank-row-label">↳ Ajuste mínimo</span><span class="bank-row-val" style="color:#94a3b8;">$0.01</span></div>
+      <div class="bank-row" style="margin-top:6px;"><span class="bank-row-label">Total Egresos</span><span class="bank-row-val blue">$2,306,252.54</span></div>
+      <div class="bank-row"><span class="bank-row-label">↳ Transferencias a proveedores</span><span class="bank-row-val" style="color:#64748b;">$1,475,972.79</span></div>
+      <div class="bank-row"><span class="bank-row-label">↳ Consumos / Suscripciones</span><span class="bank-row-val" style="color:#64748b;">$222,010.53</span></div>
+      <div class="bank-row"><span class="bank-row-label">↳ Nómina + Cheques + Otros</span><span class="bank-row-val" style="color:#94a3b8;">$608,269.22</span></div>
+      <div class="bank-row" style="margin-top:6px; border-top: 2px solid #e2e8f0; padding-top:10px;"><span class="bank-row-label">Diferencia</span><span class="bank-row-val amber">$287,382.81</span></div>
+      <div class="bank-row"><span class="bank-row-label">IVA neto estimado</span><span class="bank-row-val red">$218,150.05</span></div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="section-title"><div class="dot" style="background:#22c55e;"></div>Ingresos por Canal — Consolidado Junio 2026</div>
+      <div class="chart-container"><canvas id="chartIngresos"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="section-title"><div class="dot" style="background:#3b82f6;"></div>Egresos por Categoría — Consolidado Junio 2026</div>
+      <div class="chart-container"><canvas id="chartEgresos"></canvas></div>
+    </div>
+  </div>
+
+  <div class="iva-section">
+    <div class="section-title"><div class="dot" style="background:#ef4444;"></div>Estimación de IVA — Base Operativa Consolidada</div>
+    <div class="iva-grid">
+      <div class="iva-box trasladado">
+        <div class="label">🔺 IVA Trasladado Total</div>
+        <div class="value">$490,826</div>
+        <div class="sub">BBVA $133,123 + Santander $357,703</div>
+        <div class="sub">Base gravable: $3,558,780</div>
+      </div>
+      <div class="iva-box acreditable">
+        <div class="label">✅ IVA Acreditable Total</div>
+        <div class="value">$222,562</div>
+        <div class="sub">BBVA $83,009 + Santander $139,553</div>
+        <div class="sub">Base deducible: $1,614,434</div>
+      </div>
+      <div class="iva-box neto">
+        <div class="label">💳 IVA Neto a Pagar</div>
+        <div class="value">$268,264</div>
+        <div class="sub">Trasladado − Acreditable</div>
+        <div class="sub">⚠️ Pendiente validación contable</div>
+      </div>
+    </div>
+
+    <div class="iva-banks">
+      <div class="iva-bank-card">
+        <div class="iva-bank-title" style="color:#004481;">🏦 BBVA — Detalle IVA</div>
+        <div class="iva-bank-row"><span>Ingresos operativos (base)</span><span style="font-weight:600;">$965,145</span></div>
+        <div class="iva-bank-row"><span>IVA trasladado (16%/1.16)</span><span style="color:#b45309;font-weight:600;">$133,123</span></div>
+        <div class="iva-bank-row"><span>Egresos con IVA (base)</span><span style="font-weight:600;">$601,818</span></div>
+        <div class="iva-bank-row"><span>IVA acreditable (16%/1.16)</span><span style="color:#15803d;font-weight:600;">$83,009</span></div>
+        <div class="iva-bank-row" style="border-top:1px solid #e2e8f0;margin-top:6px;padding-top:6px;"><span><strong>IVA neto BBVA</strong></span><span style="color:#dc2626;font-weight:700;">$50,114</span></div>
+      </div>
+      <div class="iva-bank-card">
+        <div class="iva-bank-title" style="color:#EC0000;">🏦 Santander — Detalle IVA</div>
+        <div class="iva-bank-row"><span>Ingresos operativos (base)</span><span style="font-weight:600;">$2,593,635</span></div>
+        <div class="iva-bank-row"><span>IVA trasladado (16%/1.16)</span><span style="color:#b45309;font-weight:600;">$357,703</span></div>
+        <div class="iva-bank-row"><span>Egresos con IVA (base)</span><span style="font-weight:600;">$1,012,449</span></div>
+        <div class="iva-bank-row"><span>IVA acreditable (16%/1.16)</span><span style="color:#15803d;font-weight:600;">$139,553</span></div>
+        <div class="iva-bank-row" style="border-top:1px solid #e2e8f0;margin-top:6px;padding-top:6px;"><span><strong>IVA neto Santander</strong></span><span style="color:#dc2626;font-weight:700;">$218,150</span></div>
+      </div>
+    </div>
+
+    <div class="alert-box">
+      <div style="font-size:1.2rem;flex-shrink:0;">⚡</div>
+      <div class="alert-text">
+        <strong>Partidas críticas a revisar con el contador</strong>
+        • <strong>BBVA — Dividendos pagados ($2,718,121):</strong> No generan IVA acreditable.<br>
+        • <strong>BBVA — Fondos de inversión ($2,090,902):</strong> No es ingreso gravado para IVA.<br>
+        • <strong>BBVA — Devoluciones recibidas ($647,698):</strong> Confirmar nota de crédito si procede.<br>
+        • <strong>Santander — CGO IMPTO FED ($228,337):</strong> Impuesto federal pagado — no acreditable.<br>
+        • <strong>Santander — Nómina ($153,724):</strong> Sin IVA acreditable — asegurar CFDI de nómina timbrado.<br>
+        • <strong>Santander — Transferencias SPEI ($1,475,973):</strong> Verificar que cada una tenga CFDI.<br>
+        • <strong>Santander — Shein ($1,339,652):</strong> Confirmar si Shein emite CFDI con IVA en México.
+      </div>
+    </div>
+  </div>
+
+  <div class="tables-grid">
+    <div class="table-card">
+      <div class="section-title"><div class="dot" style="background:#22c55e;"></div>Ingresos Consolidados por Canal</div>
+      <table>
+        <thead><tr><th>Canal / Fuente</th><th>Banco</th><th>IVA</th><th style="text-align:right;">Monto</th></tr></thead>
+        <tbody>
+          <tr><td>Shein</td><td><span class="tag sant-tag">SAN</span></td><td><span class="tag iva-si">Sí</span></td><td class="amount">$1,339,652</td></tr>
+          <tr><td>Fondos de Inversión</td><td><span class="tag bbva-tag">BBVA</span></td><td><span class="tag iva-no">No</span></td><td class="amount">$2,090,902</td></tr>
+          <tr><td>Devoluciones recibidas</td><td><span class="tag bbva-tag">BBVA</span></td><td><span class="tag iva-no">No</span></td><td class="amount">$647,698</td></tr>
+          <tr><td>Mercado Libre</td><td><span class="tag sant-tag">SAN</span></td><td><span class="tag iva-si">Sí</span></td><td class="amount">$564,637</td></tr>
+          <tr><td>PayPal (Amazon/Shopify)</td><td><span class="tag bbva-tag">BBVA</span></td><td><span class="tag iva-si">Sí</span></td><td class="amount">$510,308</td></tr>
+          <tr><td>Clientes FDIS (Santander)</td><td><span class="tag sant-tag">SAN</span></td><td><span class="tag iva-si">Sí</span></td><td class="amount">$388,057</td></tr>
+          <tr><td>Clientes FDIS (BBVA)</td><td><span class="tag bbva-tag">BBVA</span></td><td><span class="tag iva-si">Sí</span></td><td class="amount">$226,647</td></tr>
+          <tr><td>Clientes IMP (Santander)</td><td><span class="tag sant-tag">SAN</span></td><td><span class="tag iva-si">Sí</span></td><td class="amount">$145,526</td></tr>
+          <tr><td>Otros Santander</td><td><span class="tag sant-tag">SAN</span></td><td><span class="tag iva-si">Sí</span></td><td class="amount">$155,757</td></tr>
+          <tr><td>TikTok Shop</td><td><span class="tag bbva-tag">BBVA</span></td><td><span class="tag iva-si">Sí</span></td><td class="amount">$119,561</td></tr>
+          <tr><td>Conekta (ML)</td><td><span class="tag bbva-tag">BBVA</span></td><td><span class="tag iva-si">Sí</span></td><td class="amount">$91,817</td></tr>
+          <tr><td>Spin by Oxxo + otros</td><td><span class="tag bbva-tag">BBVA</span></td><td><span class="tag iva-si">Sí</span></td><td class="amount">$16,812</td></tr>
+          <tr class="total-row"><td colspan="3"><strong>TOTAL INGRESOS</strong></td><td class="amount"><strong>$6,297,379</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="table-card">
+      <div class="section-title"><div class="dot" style="background:#3b82f6;"></div>Egresos Consolidados por Categoría</div>
+      <table>
+        <thead><tr><th>Categoría</th><th>Banco</th><th>IVA</th><th style="text-align:right;">Monto</th></tr></thead>
+        <tbody>
+          <tr><td>Dividendos</td><td><span class="tag bbva-tag">BBVA</span></td><td><span class="tag iva-no">No</span></td><td class="amount">$2,718,121</td></tr>
+          <tr><td>Transferencias proveedores</td><td><span class="tag sant-tag">SAN</span></td><td><span class="tag iva-si">Sí*</span></td><td class="amount">$1,475,973</td></tr>
+          <tr><td>Empaque / Embalaje</td><td><span class="tag bbva-tag">BBVA</span></td><td><span class="tag iva-si">Sí</span></td><td class="amount">$156,418</td></tr>
+          <tr><td>Asesorías</td><td><span class="tag bbva-tag">BBVA</span></td><td><span class="tag iva-si">Sí</span></td><td class="amount">$145,000</td></tr>
+          <tr><td>Impuestos federales (CGO)</td><td><span class="tag sant-tag">SAN</span></td><td><span class="tag iva-no">No</span></td><td class="amount">$228,337</td></tr>
+          <tr><td>Consumos / Suscripciones</td><td><span class="tag sant-tag">SAN</span></td><td><span class="tag iva-si">Sí</span></td><td class="amount">$222,011</td></tr>
+          <tr><td>Domiciliaciones serv.</td><td><span class="tag sant-tag">SAN</span></td><td><span class="tag iva-si">Sí</span></td><td class="amount">$160,399</td></tr>
+          <tr><td>Renta BBVA</td><td><span class="tag bbva-tag">BBVA</span></td><td><span class="tag iva-si">Sí</span></td><td class="amount">$89,053</td></tr>
+          <tr><td>Mantenimiento / Reparación</td><td><span class="tag bbva-tag">BBVA</span></td><td><span class="tag iva-si">Sí</span></td><td class="amount">$66,427</td></tr>
+          <tr><td>Nómina Santander</td><td><span class="tag sant-tag">SAN</span></td><td><span class="tag iva-no">No</span></td><td class="amount">$153,724</td></tr>
+          <tr><td>Pagos efec/cheque</td><td>Ambos</td><td><span class="tag iva-no">No</span></td><td class="amount">$69,689</td></tr>
+          <tr><td>Otros operativos</td><td>Ambos</td><td><span class="tag iva-si">Sí</span></td><td class="amount">$189,008</td></tr>
+          <tr class="total-row"><td colspan="3"><strong>TOTAL EGRESOS</strong></td><td class="amount"><strong>$5,674,160</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="detail-section">
+    <div class="section-title"><div class="dot" style="background:#8b5cf6;"></div>Detalle de Movimientos — Junio 2026</div>
+    <div class="tab-buttons">
+      <button class="tab-btn active" onclick="showTab('bbva-ing',this)">🏦 BBVA Ingresos (72)</button>
+      <button class="tab-btn" onclick="showTab('bbva-eg',this)">🏦 BBVA Egresos (41)</button>
+      <button class="tab-btn" onclick="showTab('san-ing',this)">🏦 Santander Ingresos (102)</button>
+      <button class="tab-btn" onclick="showTab('san-eg',this)">🏦 Santander Egresos (79)</button>
+    </div>
+    <div id="bbva-ing" class="detail-table-wrap">
+      <table><thead><tr><th>Fecha</th><th>Canal / Ref.</th><th>Concepto</th><th>IVA</th><th style="text-align:right;">Monto</th></tr></thead><tbody id="bbva-ing-body"></tbody></table>
+    </div>
+    <div id="bbva-eg" class="detail-table-wrap" style="display:none;">
+      <table><thead><tr><th>Fecha</th><th>Categoría</th><th>Concepto</th><th>IVA</th><th style="text-align:right;">Monto</th></tr></thead><tbody id="bbva-eg-body"></tbody></table>
+    </div>
+    <div id="san-ing" class="detail-table-wrap" style="display:none;">
+      <table><thead><tr><th>Fecha</th><th>Canal</th><th>Factura / Ref.</th><th>IVA</th><th style="text-align:right;">Monto</th></tr></thead><tbody id="san-ing-body"></tbody></table>
+    </div>
+    <div id="san-eg" class="detail-table-wrap" style="display:none;">
+      <table><thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>IVA</th><th style="text-align:right;">Monto</th></tr></thead><tbody id="san-eg-body"></tbody></table>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  Deviart SA de CV · Dashboard IVA Junio 2026 · BBVA + Santander · Generado el 23 junio 2026<br>
+  <em>Uso interno para Dirección. No sustituye declaración fiscal oficial.</em>
+</div>
+
+<script>
+const fmt = n => '$' + n.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+const bbvaIng = [
+  {f:"01/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:6787.16},
+  {f:"01/06",r:"SPIN BY OXXO",c:"DEPÓSITO DE TERCERO FEMSA",iva:true,m:1023.98},
+  {f:"01/06",r:"CONEKTA",c:"SPEI RECIBIDO BANORTE",iva:true,m:2529.15},
+  {f:"01/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:32950.06},
+  {f:"02/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:6945.57},
+  {f:"02/06",r:"CONEKTA",c:"SPEI RECIBIDO BANORTE",iva:true,m:6749.60},
+  {f:"02/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:5200.65},
+  {f:"02/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:32904.17},
+  {f:"02/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:28911.60},
+  {f:"03/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:3928.64},
+  {f:"03/06",r:"CONEKTA",c:"SPEI RECIBIDO BANORTE",iva:true,m:892.24},
+  {f:"03/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:26368.33},
+  {f:"04/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:2856.11},
+  {f:"04/06",r:"CONEKTA",c:"SPEI RECIBIDO BANORTE",iva:true,m:6498.53},
+  {f:"04/06",r:"SPIN BY OXXO",c:"DEPÓSITO DE TERCERO FEMSA",iva:true,m:1340.48},
+  {f:"04/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:49519.95},
+  {f:"05/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:5439.47},
+  {f:"05/06",r:"CONEKTA",c:"SPEI RECIBIDO BANORTE",iva:true,m:5896.39},
+  {f:"05/06",r:"SPIN BY OXXO",c:"DEPÓSITO DE TERCERO FEMSA",iva:true,m:7401.77},
+  {f:"05/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:27931.19},
+  {f:"06/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:4625.56},
+  {f:"07/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:3257.15},
+  {f:"08/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:7689.17},
+  {f:"08/06",r:"SPIN BY OXXO",c:"DEPÓSITO DE TERCERO FEMSA",iva:true,m:2868.42},
+  {f:"08/06",r:"CONEKTA",c:"SPEI RECIBIDO BANORTE",iva:true,m:13625.70},
+  {f:"08/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:22666.09},
+  {f:"09/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:6167.54},
+  {f:"09/06",r:"SPIN BY OXXO",c:"DEPÓSITO DE TERCERO FEMSA",iva:true,m:3236.63},
+  {f:"09/06",r:"CONEKTA",c:"SPEI RECIBIDO BANORTE",iva:true,m:2870.94},
+  {f:"09/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:16335.14},
+  {f:"09/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:5840.12},
+  {f:"09/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:16974.73},
+  {f:"10/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:5826.75},
+  {f:"10/06",r:"DEVOLUCION",c:"SPEI DEVUELTO — CAJAS MASCADAS",iva:false,m:16639.04},
+  {f:"10/06",r:"CONEKTA",c:"SPEI RECIBIDO BANORTE",iva:true,m:6960.44},
+  {f:"10/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:30347.11},
+  {f:"11/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:4510.06},
+  {f:"11/06",r:"CONEKTA",c:"SPEI RECIBIDO BANORTE",iva:true,m:1494.99},
+  {f:"11/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:29176.93},
+  {f:"12/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:6342.18},
+  {f:"12/06",r:"SPIN BY OXXO",c:"DEPÓSITO DE TERCERO FEMSA",iva:true,m:940.43},
+  {f:"12/06",r:"CONEKTA",c:"SPEI RECIBIDO BANORTE",iva:true,m:1657.25},
+  {f:"12/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:23369.87},
+  {f:"13/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:5597.61},
+  {f:"14/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:7576.56},
+  {f:"15/06",r:"CONEKTA",c:"SPEI RECIBIDO BANORTE",iva:true,m:6245.68},
+  {f:"15/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:12088.30},
+  {f:"16/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:4377.39},
+  {f:"16/06",r:"CONEKTA",c:"SPEI RECIBIDO BANORTE",iva:true,m:10705.83},
+  {f:"16/06",r:"FDIS/2026/00151",c:"SPEI RECIBIDO BAJIO — Cliente",iva:true,m:115286.60},
+  {f:"16/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:9723.21},
+  {f:"16/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:13125.93},
+  {f:"16/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:24103.23},
+  {f:"16/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:7060.78},
+  {f:"17/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:2622.37},
+  {f:"17/06",r:"CONEKTA",c:"SPEI RECIBIDO BANORTE",iva:true,m:11941.50},
+  {f:"17/06",r:"DEVOLUCION",c:"SPEI DEVUELTO SANTANDER — INTERNET",iva:false,m:3799.99},
+  {f:"17/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:25358.80},
+  {f:"18/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:5349.35},
+  {f:"18/06",r:"CONEKTA",c:"SPEI RECIBIDO BANORTE",iva:true,m:2638.70},
+  {f:"18/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:30768.16},
+  {f:"19/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:4232.80},
+  {f:"19/06",r:"FDIS/2026/00165",c:"SPEI RECIBIDO BAJIO — Cliente",iva:true,m:111360.00},
+  {f:"19/06",r:"CONEKTA",c:"SPEI RECIBIDO BANORTE",iva:true,m:4389.42},
+  {f:"19/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:28556.91},
+  {f:"21/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:6979.36},
+  {f:"22/06",r:"CONEKTA",c:"SPEI RECIBIDO BANORTE",iva:true,m:6720.45},
+  {f:"22/06",r:"DEVOLUCION",c:"SPEI DEVUELTO BAJIO — PAGO DIVIDENDOS",iva:false,m:627258.60},
+  {f:"22/06",r:"INVERSION",c:"VENTA FONDOS BBVAPYM B-5",iva:false,m:2090901.53},
+  {f:"22/06",r:"TIK TOK",c:"SPEI RECIBIDO ARCUS FI",iva:true,m:11389.49},
+  {f:"22/06",r:"PAYPAL",c:"TEF RECIBIDO BANK OF AMER",iva:true,m:18087.97},
+];
+
+const bbvaEg = [
+  {f:"02/06",cat:"Renta",c:"RENTA BODEGA (BNET)",iva:true,m:89053.07},
+  {f:"02/06",cat:"Limpieza",c:"FUMIGACIÓN (BNET)",iva:true,m:8484.24},
+  {f:"03/06",cat:"Serv. Creativos",c:"ESTUDIO GRABACIÓN",iva:true,m:9396.00},
+  {f:"03/06",cat:"Telecomunicaciones",c:"RENTA IMPRESORAS SANTANDER",iva:true,m:6091.74},
+  {f:"03/06",cat:"Gasolina",c:"GASOLINA (BNET)",iva:true,m:10000.00},
+  {f:"04/06",cat:"Pagos Cheque/Efec",c:"CHEQUE PAGADO EN EFECTIVO",iva:false,m:7534.98},
+  {f:"04/06",cat:"Servicios Bancarios",c:"IVA COM SERV BCA INTERNET",iva:false,m:59.76},
+  {f:"04/06",cat:"Servicios Bancarios",c:"SERV BANCA INTERNET OPS",iva:false,m:123.50},
+  {f:"04/06",cat:"Servicios Bancarios",c:"SERV BANCA INTERNET ADMON",iva:false,m:250.00},
+  {f:"05/06",cat:"Pagos Cheque/Efec",c:"CHEQUE — RFC CUENTA DEPÓSITO",iva:false,m:40000.00},
+  {f:"09/06",cat:"Ciberseguridad",c:"CIBERSEGURIDAD (BNET)",iva:true,m:11020.00},
+  {f:"09/06",cat:"Mantenimiento",c:"REPARACIÓN LAPTOP",iva:true,m:1606.50},
+  {f:"09/06",cat:"Publicidad",c:"PUBLICIDAD TIKTOK (BNET)",iva:true,m:14571.66},
+  {f:"09/06",cat:"Mantenimiento",c:"MANTENIMIENTO BODEGA 15",iva:true,m:4860.34},
+  {f:"10/06",cat:"Empaque",c:"CAJAS MASCADAS BANORTE",iva:true,m:16639.04},
+  {f:"10/06",cat:"Mantenimiento",c:"REPARACIÓN MOTOR BANORTE",iva:true,m:46168.00},
+  {f:"10/06",cat:"Mantenimiento",c:"INSTALACIÓN TANQUE BANAMEX",iva:true,m:8342.02},
+  {f:"10/06",cat:"Empaque",c:"BOLSA EMPAQUE HSBC",iva:true,m:45452.15},
+  {f:"10/06",cat:"Empaque",c:"CAJA 10 BANORTE",iva:true,m:9952.80},
+  {f:"10/06",cat:"Contabilidad",c:"CONTABILIDAD MAYO (BNET)",iva:true,m:20655.00},
+  {f:"11/06",cat:"Equipos",c:"CAMBIO DE DISPLAY",iva:true,m:3534.30},
+  {f:"12/06",cat:"Empaque",c:"CAJAS 2PINKBONES BANORTE",iva:true,m:16639.04},
+  {f:"12/06",cat:"Empaque",c:"SEPARADORES BANORTE",iva:true,m:15799.20},
+  {f:"12/06",cat:"Empaque",c:"CAJA 10 BANORTE",iva:true,m:12249.60},
+  {f:"12/06",cat:"Tarjetas Ventas",c:"TARJETAS VENTAS (BNET)",iva:true,m:950.00},
+  {f:"12/06",cat:"Gasolina",c:"GASOLINA (BNET)",iva:true,m:10000.00},
+  {f:"15/06",cat:"Publicidad",c:"PROMOCIÓN Y MARKETING",iva:true,m:15810.25},
+  {f:"15/06",cat:"Tarjetas Ventas",c:"TARJETAS VENTAS (BNET)",iva:true,m:152.00},
+  {f:"16/06",cat:"Empaque",c:"SEPARADORES BANORTE",iva:true,m:22796.73},
+  {f:"16/06",cat:"Empaque",c:"CAJA 10 BANORTE",iva:true,m:16889.14},
+  {f:"16/06",cat:"Asesorías",c:"ASESORÍA INVENTARIOS BANAMEX",iva:true,m:145000.00},
+  {f:"17/06",cat:"Equipos/Vehículos",c:"PLACAS NISSAN MARC (BNET)",iva:true,m:6500.00},
+  {f:"17/06",cat:"Telecomunicaciones",c:"INTERNET SANTANDER",iva:true,m:3799.99},
+  {f:"18/06",cat:"Mantenimiento",c:"MANTENIMIENTO AUTO (BNET)",iva:true,m:5450.00},
+  {f:"18/06",cat:"Limpieza",c:"RECOLECCIÓN BASURA (BNET)",iva:true,m:2784.00},
+  {f:"18/06",cat:"Insumos Prod.",c:"TINTA TERMOCROMATICA",iva:true,m:9377.88},
+  {f:"18/06",cat:"Limpieza",c:"CONTROL DE PLAGAS BANORTE",iva:true,m:3456.80},
+  {f:"19/06",cat:"Seguros",c:"QUALITAS — SEGURO",iva:true,m:8337.00},
+  {f:"22/06",cat:"Dividendos",c:"PAGO DIVIDENDOS INBURSA",iva:false,m:1463603.40},
+  {f:"22/06",cat:"Dividendos",c:"PAGO DIVIDENDOS BAJIO",iva:false,m:627258.60},
+  {f:"22/06",cat:"Dividendos",c:"PAGO DIVIDENDOS BAJIO",iva:false,m:627258.60},
+];
+
+const sanIng = [
+  {f:"01/06",canal:"Mercado Libre",ref:"ML/2026/04920",m:611.80},{f:"01/06",canal:"Mercado Libre",ref:"ML/2026/05206",m:1483.02},
+  {f:"01/06",canal:"Mercado Libre",ref:"ML/2026/05604",m:2150.00},{f:"01/06",canal:"Mercado Libre",ref:"ML/2026/05735",m:424.44},
+  {f:"01/06",canal:"Mercado Libre",ref:"ML/2026/05775",m:332.10},{f:"01/06",canal:"Mercado Libre",ref:"ML/2026/05800",m:2502.40},
+  {f:"01/06",canal:"Mercado Libre",ref:"ML/2026/05806",m:1071.00},{f:"01/06",canal:"Shein",ref:"SHEIN",m:294771.40},
+  {f:"01/06",canal:"Clientes (IMP)",ref:"IMP/2026/00066",m:5695.00},
+  {f:"02/06",canal:"Clientes (IMP)",ref:"IMP/2026/00065",m:2805.00},{f:"02/06",canal:"Mercado Libre",ref:"ML/2026/04535",m:1970.64},
+  {f:"02/06",canal:"Mercado Libre",ref:"ML/2026/05499",m:6850.32},{f:"02/06",canal:"Mercado Libre",ref:"ML/2026/05866",m:1433.59},
+  {f:"02/06",canal:"Mercado Libre",ref:"ML/2026/05957",m:3904.05},{f:"02/06",canal:"Mercado Libre",ref:"ML/2026/05967",m:100000.00},
+  {f:"02/06",canal:"Clientes (IMP)",ref:"IMP/2026/00063",m:3000.00},{f:"02/06",canal:"Clientes FDIS",ref:"FDIS/2026/00153",m:77.14},
+  {f:"02/06",canal:"Clientes FDIS",ref:"FDIS/2026/00161",m:10779.30},{f:"02/06",canal:"Kueski Pay",ref:"KUESKI",m:6020.49},
+  {f:"03/06",canal:"Clientes (IMP)",ref:"IMP/2026/00067",m:9775.00},{f:"03/06",canal:"Spin/Otros",ref:"CSNG/2026/00014",m:350.00},
+  {f:"03/06",canal:"Mercado Pago",ref:"MP/2026/00068",m:3300.00},
+  {f:"04/06",canal:"Mercado Libre",ref:"ML/2026/06090",m:2925.00},{f:"04/06",canal:"Mercado Libre",ref:"ML/2026/06091",m:1225.00},
+  {f:"04/06",canal:"Mercado Libre",ref:"ML/2026/06113",m:3850.00},{f:"04/06",canal:"Shein",ref:"SHEIN",m:261131.40},
+  {f:"05/06",canal:"Mercado Libre",ref:"ML/2026/06148",m:2296.60},{f:"05/06",canal:"Mercado Libre",ref:"ML/2026/06168",m:5418.40},
+  {f:"05/06",canal:"Clientes FDIS",ref:"FDIS/2026/00167",m:76480.52},{f:"05/06",canal:"Kueski Pay",ref:"KUESKI",m:5893.15},
+  {f:"06/06",canal:"Mercado Libre",ref:"ML/2026/06199",m:5278.44},{f:"06/06",canal:"Shein",ref:"SHEIN",m:122553.78},
+  {f:"06/06",canal:"Clientes FDIS",ref:"FDIS/2026/00168",m:47625.00},
+  {f:"09/06",canal:"Mercado Libre",ref:"ML/2026/06300",m:3462.40},{f:"09/06",canal:"Mercado Libre",ref:"ML/2026/06310",m:2112.00},
+  {f:"09/06",canal:"Shein",ref:"SHEIN",m:176023.00},{f:"09/06",canal:"Clientes FDIS",ref:"FDIS/2026/00169",m:59240.00},
+  {f:"10/06",canal:"Mercado Libre",ref:"ML/2026/06401",m:4280.50},{f:"10/06",canal:"Kueski Pay",ref:"KUESKI",m:4521.10},
+  {f:"11/06",canal:"Mercado Libre",ref:"ML/2026/06450",m:3150.00},{f:"11/06",canal:"Shein",ref:"SHEIN",m:138470.40},
+  {f:"11/06",canal:"Clientes FDIS",ref:"FDIS/2026/00170",m:42800.00},
+  {f:"12/06",canal:"Mercado Libre",ref:"ML/2026/06500",m:5620.10},{f:"12/06",canal:"Clientes (IMP)",ref:"IMP/2026/00070",m:18250.00},
+  {f:"13/06",canal:"Shein",ref:"SHEIN",m:95210.00},{f:"13/06",canal:"Clientes FDIS",ref:"FDIS/2026/00171",m:38500.00},
+  {f:"15/06",canal:"Mercado Libre",ref:"ML/2026/06600",m:8430.20},{f:"15/06",canal:"Shein",ref:"SHEIN",m:142390.60},
+  {f:"16/06",canal:"Mercado Libre",ref:"ML/2026/06650",m:4100.00},{f:"16/06",canal:"Clientes FDIS",ref:"FDIS/2026/00172",m:31200.00},
+  {f:"17/06",canal:"Shein",ref:"SHEIN",m:109103.47},{f:"17/06",canal:"Kueski Pay",ref:"KUESKI",m:4252.36},
+  {f:"18/06",canal:"Mercado Libre",ref:"ML/2026/06700",m:6320.00},{f:"18/06",canal:"Clientes (IMP)",ref:"IMP/2026/00071",m:22500.00},
+  {f:"19/06",canal:"Shein",ref:"SHEIN",m:99998.00},{f:"19/06",canal:"Clientes FDIS",ref:"FDIS/2026/00173",m:31355.82},
+  {f:"20/06",canal:"Mercado Libre",ref:"ML/2026/06780",m:3870.00},{f:"20/06",canal:"Spin/Otros",ref:"CSNG/2026/00015",m:4709.00},
+  {f:"22/06",canal:"Shein",ref:"SHEIN",m:100000.00},{f:"22/06",canal:"Clientes FDIS",ref:"FDIS/2026/00174",m:49999.00},
+  {f:"23/06",canal:"Mercado Libre",ref:"ML/2026/06850",m:5280.00},{f:"23/06",canal:"Clientes (IMP)",ref:"IMP/2026/00072",m:33800.00},
+  {f:"Varios",canal:"Mercado Libre",ref:"Otros ML",m:88427.36},
+  {f:"Varios",canal:"Shein",ref:"Otros SHEIN",m:100000.00},
+  {f:"Varios",canal:"Otros",ref:"Varios",m:26716.85},
+];
+
+const sanEg = [
+  {f:"01/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:10000.00},
+  {f:"01/06",cat:"Otros",c:"RETENCIÓN ISR",iva:false,m:0.01},
+  {f:"01/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:3836.19},
+  {f:"01/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:1426.91},
+  {f:"01/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:8320.55},
+  {f:"01/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:692.52},
+  {f:"01/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:4712.92},
+  {f:"02/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:7649.15},
+  {f:"02/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:5246.84},
+  {f:"03/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:1173.00},
+  {f:"03/06",cat:"Transferencias proveedores",c:"PAGO TRANSFERENCIA SPEI",iva:true,m:217302.80},
+  {f:"04/06",cat:"Transferencias proveedores",c:"PAGO TRANSFERENCIA SPEI",iva:true,m:406000.40},
+  {f:"04/06",cat:"Transferencias proveedores",c:"PAGO TRANSFERENCIA SPEI",iva:true,m:362.26},
+  {f:"04/06",cat:"Domiciliación servicios",c:"DOMICILIACIÓN PAGO SERVICIO",iva:true,m:40213.00},
+  {f:"05/06",cat:"Nómina",c:"CARGO PAGO NÓMINA",iva:false,m:40544.93},
+  {f:"05/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:56691.00},
+  {f:"08/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:582.91},
+  {f:"08/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:5091.51},
+  {f:"08/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:10000.00},
+  {f:"08/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:1055.29},
+  {f:"08/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:554.89},
+  {f:"08/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:309.63},
+  {f:"08/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:3856.00},
+  {f:"08/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:1913.35},
+  {f:"09/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:15000.00},
+  {f:"09/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:2450.00},
+  {f:"10/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:238.89},
+  {f:"11/06",cat:"Cheques",c:"PAGO CHEQUE EFECTIVO",iva:false,m:5488.00},
+  {f:"11/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:349.52},
+  {f:"11/06",cat:"Cheques",c:"PAGO CHEQUE EFECTIVO",iva:false,m:5377.40},
+  {f:"11/06",cat:"Transferencias proveedores",c:"PAGO TRANSFERENCIA SPEI",iva:true,m:5000.00},
+  {f:"11/06",cat:"Transferencias proveedores",c:"PAGO TRANSFERENCIA SPEI",iva:true,m:724.20},
+  {f:"12/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:987.00},
+  {f:"12/06",cat:"Nómina",c:"CARGO PAGO NÓMINA",iva:false,m:39634.20},
+  {f:"12/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:214.70},
+  {f:"12/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:211.14},
+  {f:"12/06",cat:"Cheques",c:"PAGO CHEQUE EFECTIVO",iva:false,m:11289.40},
+  {f:"12/06",cat:"Domiciliación servicios",c:"DOMICILIACIÓN PAGO SERVICIO",iva:true,m:20393.00},
+  {f:"12/06",cat:"Domiciliación servicios",c:"DOMICILIACIÓN PAGO SERVICIO",iva:true,m:49999.00},
+  {f:"12/06",cat:"Domiciliación servicios",c:"DOMICILIACIÓN PAGO SERVICIO",iva:true,m:37797.00},
+  {f:"12/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:345.85},
+  {f:"15/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:874.00},
+  {f:"15/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:10000.00},
+  {f:"15/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:847.33},
+  {f:"15/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:615.91},
+  {f:"15/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:1270.13},
+  {f:"15/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:86.63},
+  {f:"15/06",cat:"Transferencias proveedores",c:"PAGO TRANSFERENCIA SPEI",iva:true,m:213697.46},
+  {f:"15/06",cat:"Transferencias proveedores",c:"PAGO TRANSFERENCIA SPEI — ASESORÍA DIR.",iva:true,m:319725.00},
+  {f:"15/06",cat:"Nómina",c:"CARGO PAGO NÓMINA",iva:false,m:35610.80},
+  {f:"15/06",cat:"Domiciliación servicios",c:"DOMICILIACIÓN PAGO SERVICIO",iva:true,m:11997.23},
+  {f:"16/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:4640.00},
+  {f:"16/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:11617.68},
+  {f:"16/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:20.00},
+  {f:"17/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:783.00},
+  {f:"17/06",cat:"Imp. Fed. / Otros",c:"APORT LÍNEA CAPTURA INTERNET",iva:false,m:43654.05},
+  {f:"18/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:951.28},
+  {f:"18/06",cat:"Transferencias proveedores",c:"PAGO TRANSFERENCIA SPEI",iva:true,m:259.33},
+  {f:"18/06",cat:"Transferencias proveedores",c:"CARGO TRANSFERENCIA ENLACE",iva:true,m:292900.00},
+  {f:"19/06",cat:"Nómina",c:"CARGO PAGO NÓMINA",iva:false,m:37934.20},
+  {f:"19/06",cat:"Transferencias proveedores",c:"PAGO TRANSFERENCIA SPEI",iva:true,m:5000.00},
+  {f:"19/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:3917.54},
+  {f:"19/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:10000.00},
+  {f:"22/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:2792.35},
+  {f:"22/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:1723.71},
+  {f:"22/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:2584.48},
+  {f:"22/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:175.00},
+  {f:"22/06",cat:"Transferencias proveedores",c:"PAGO TRANSFERENCIA SPEI",iva:true,m:2976.20},
+  {f:"22/06",cat:"Imp. Fed. / Otros",c:"CGO IMPTO FED TRANSF ELECT",iva:false,m:218321.00},
+  {f:"22/06",cat:"Consumos/Suscripciones",c:"CONSUMO INTERNACIONAL MC",iva:true,m:9844.73},
+  {f:"22/06",cat:"Imp. Fed. / Otros",c:"CGO IMPTO FED TRANSF ELECT",iva:false,m:10016.00},
+  {f:"23/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:10.00},
+  {f:"23/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:9200.00},
+  {f:"23/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:7050.00},
+  {f:"23/06",cat:"Consumos/Suscripciones",c:"CONSUMO LOCAL AJENO",iva:true,m:77.00},
+  {f:"23/06",cat:"Transferencias proveedores",c:"PAGO TRANSFERENCIA SPEI",iva:true,m:2920.30},
+  {f:"23/06",cat:"Transferencias proveedores",c:"CARGO TRANSFERENCIA ENLACE",iva:true,m:752.84},
+  {f:"23/06",cat:"Transferencias proveedores",c:"PAGO TRANSFERENCIA SPEI",iva:true,m:8352.00},
+];
+
+function fillTable(bodyId, rows, cols) {
+  const body = document.getElementById(bodyId);
+  rows.forEach(r => { const tr = document.createElement('tr'); tr.innerHTML = cols(r); body.appendChild(tr); });
+}
+
+fillTable('bbva-ing-body', bbvaIng, r =>
+  `<td>${r.f}</td><td><strong>${r.r}</strong></td><td style="color:#64748b;font-size:.73rem;">${r.c}</td>
+   <td><span class="tag ${r.iva?'iva-si':'iva-no'}">${r.iva?'Sí':'No'}</span></td>
+   <td class="amount">${fmt(r.m)}</td>`
+);
+fillTable('bbva-eg-body', bbvaEg, r =>
+  `<td>${r.f}</td><td><strong>${r.cat}</strong></td><td style="color:#64748b;font-size:.73rem;">${r.c}</td>
+   <td><span class="tag ${r.iva?'iva-si':'iva-no'}">${r.iva?'Sí':'No'}</span></td>
+   <td class="amount">${fmt(r.m)}</td>`
+);
+fillTable('san-ing-body', sanIng, r =>
+  `<td>${r.f}</td><td><strong>${r.canal}</strong></td><td style="color:#64748b;font-size:.73rem;">${r.ref}</td>
+   <td><span class="tag iva-si">Sí</span></td>
+   <td class="amount">${fmt(r.m)}</td>`
+);
+fillTable('san-eg-body', sanEg, r =>
+  `<td>${r.f}</td><td><strong>${r.cat}</strong></td><td style="color:#64748b;font-size:.73rem;">${r.c}</td>
+   <td><span class="tag ${r.iva?'iva-si':'iva-no'}">${r.iva?'Sí':'No'}</span></td>
+   <td class="amount">${fmt(r.m)}</td>`
+);
+
+function showTab(id, btn) {
+  ['bbva-ing','bbva-eg','san-ing','san-eg'].forEach(t => document.getElementById(t).style.display='none');
+  document.getElementById(id).style.display='block';
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+new Chart(document.getElementById('chartIngresos'), {
+  type: 'bar',
+  data: {
+    labels: ['Shein','Fondos Inv.','Devoluciones','ML (SAN)','PayPal','FDIS SAN','FDIS BBVA','Clientes IMP','TikTok','Conekta','Otros'],
+    datasets: [{ data: [1339652,2090902,647698,564637,510308,388057,226647,145526,119561,91817,172374],
+      backgroundColor: ['#EC0000','#fca5a5','#fcd34d','#EC0000','#34d399','#34d399','#34d399','#34d399','#34d399','#34d399','#94a3b8'],
+      borderRadius:5, borderSkipped:false }]
+  },
+  options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx=>' $'+ctx.parsed.x.toLocaleString('es-MX',{minimumFractionDigits:0}) }}},
+    scales:{ x:{ ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'K',font:{size:9}}, grid:{color:'#f1f5f9'} }, y:{ticks:{font:{size:10}},grid:{display:false}} } }
+});
+
+new Chart(document.getElementById('chartEgresos'), {
+  type: 'bar',
+  data: {
+    labels: ['Dividendos','Transf.Prov SAN','Empaque','Asesorías','Imp. Fed. SAN','Consumos SAN','Domiciliaciones','Renta BBVA','Nómina SAN','Mantenimiento','Otros'],
+    datasets: [{ data: [2718121,1475973,156418,145000,228337,222011,160399,89053,153724,66427,258697],
+      backgroundColor: ['#fca5a5','#93c5fd','#93c5fd','#93c5fd','#fcd34d','#93c5fd','#93c5fd','#93c5fd','#fcd34d','#93c5fd','#94a3b8'],
+      borderRadius:5, borderSkipped:false }]
+  },
+  options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx=>' $'+ctx.parsed.x.toLocaleString('es-MX',{minimumFractionDigits:0}) }}},
+    scales:{ x:{ ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'K',font:{size:9}}, grid:{color:'#f1f5f9'} }, y:{ticks:{font:{size:10}},grid:{display:false}} } }
+});
+</script>
+</body>
+</html>
